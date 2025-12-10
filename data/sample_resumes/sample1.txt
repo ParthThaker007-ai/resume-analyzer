@@ -1,0 +1,17 @@
+JOHN DOE
+Email: john@example.com | Phone: 9876543210 | LinkedIn: linkedin.com/in/john
+
+PROFESSIONAL SUMMARY
+Experienced Machine Learning Engineer with 5+ years in Python, TensorFlow, Deep Learning.
+
+WORK EXPERIENCE
+Senior ML Engineer | Tech Company | 2021-Present
+- Developed 10+ ML models using TensorFlow
+- Led team of 3 engineers
+- Deployed models to AWS
+
+EDUCATION
+M.Tech AI | University | 2018
+
+SKILLS
+Python, Machine Learning, TensorFlow, PyTorch, Kubernetes, AWS, Docker, SQL, Git
