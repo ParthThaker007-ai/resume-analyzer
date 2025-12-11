@@ -1,92 +1,98 @@
-"""Match resume to job descriptions"""
+"""
+Job Matching Module - TF-IDF + Keyword Matching
+No external dependencies beyond scikit-learn/numpy
+"""
 
-from typing import List, Dict, Tuple
+import re
+from typing import List, Dict
+from collections import Counter
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
 
 class JobMatcher:
-    """Match resume against job descriptions"""
+    """Job matching using TF-IDF + keyword analysis."""
     
     @staticmethod
-    def calculate_fit_score(resume_text: str, job_description: str) -> float:
-        """Calculate how well resume matches job description"""
-        vectorizer = TfidfVectorizer(lowercase=True, stop_words='english')
-        try:
-            vectors = vectorizer.fit_transform([resume_text, job_description])
-            similarity = cosine_similarity(vectors)
-            return round(similarity * 100, 1)
-        except:
-            return 0.0
+    def preprocess_text(text: str) -> str:
+        """Clean and normalize text for matching."""
+        # Lowercase + remove special chars
+        text = re.sub(r'[^\w\s]', ' ', text.lower())
+        # Remove stopwords
+        stop_words = {
+            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'
+        }
+        words = [w for w in text.split() if w not in stop_words and len(w) > 2]
+        return ' '.join(words)
     
     @staticmethod
-    def match_keywords(resume_skills: Dict[str, List[str]], 
-                      job_keywords: List[str]) -> Tuple[List[str], List[str], float]:
-        """Match resume skills with job keywords"""
-        resume_skill_names = [s.lower() for s in resume_skills.keys()]
-        job_keywords_lower = [k.lower() for k in job_keywords]
+    def rank_jobs(resume_text: str, skills_dict: dict, jobs: List[Dict]) -> List[Dict]:
+        """Rank jobs by fit score using TF-IDF + keyword matching."""
+        results = []
         
-        matched = []
-        for job_kw in job_keywords_lower:
-            for resume_skill in resume_skill_names:
-                if job_kw in resume_skill or resume_skill in job_kw:
-                    matched.append(job_kw)
-                    break
+        # Extract skills from resume
+        resume_skills = []
+        if skills_dict and 'Technical Skills' in skills_dict:
+            resume_skills = [skill.lower() for skill in skills_dict['Technical Skills']]
         
-        missing = [kw for kw in job_keywords_lower if kw not in matched]
-        match_percentage = (len(matched) / len(job_keywords)) * 100 if job_keywords else 0
+        for job in jobs:
+            job_title = job.get('title', '')
+            job_keywords = job.get('keywords', [])
+            
+            # Keyword matching (case-insensitive)
+            matched_keywords = []
+            missing_keywords = []
+            
+            for keyword in job_keywords:
+                keyword_lower = keyword.lower()
+                # Check resume text + extracted skills
+                if (keyword_lower in resume_text.lower() or 
+                    keyword_lower in ' '.join(resume_skills)):
+                    matched_keywords.append(keyword)
+                else:
+                    missing_keywords.append(keyword)
+            
+            # Calculate scores
+            keyword_match_score = len(matched_keywords) / max(len(job_keywords), 1) * 100
+            skills_match_score = sum(1 for skill in resume_skills if skill in [k.lower() for k in job_keywords]) / max(len(resume_skills), 1) * 100
+            
+            # Combined fit score
+            fit_score = (keyword_match_score * 0.6 + skills_match_score * 0.4)
+            
+            results.append({
+                'job_title': job_title,
+                'fit_score': round(fit_score, 1),
+                'keyword_match': round(keyword_match_score, 1),
+                'matched_keywords': matched_keywords[:10],
+                'missing_keywords': missing_keywords[:8],
+                'matched_count': len(matched_keywords),
+                'keywords_count': len(job_keywords),
+            })
         
-        return matched, missing, round(match_percentage, 1)
-    
-    @staticmethod
-    def rank_jobs(resume_text, skills_dict, jobs):
-    """Rank jobs with case-insensitive matching."""
-    resume_lower = resume_text.lower()
-    results = []
-    
-    for job in jobs:
-        job_lower = {k.lower(): v.lower() for k, v in job.items()}
-        matched_keywords = []
-        missing_keywords = []
-        
-        # Case-insensitive keyword matching
-        for keyword in job['keywords']:
-            keyword_lower = keyword.lower()
-            if keyword_lower in resume_lower or any(keyword_lower in skill.lower() for skill in skills_dict.get('Technical Skills', [])):
-                matched_keywords.append(keyword)
-            else:
-                missing_keywords.append(keyword)
-        
-        fit_score = min(100, max(0, (len(matched_keywords) / len(job['keywords'])) * 100))
-        
-        results.append({
-            'job_title': job['title'],
-            'fit_score': fit_score,
-            'matched_keywords': matched_keywords,
-            'missing_keywords': missing_keywords,
-            'matched_count': len(matched_keywords),
-            'keywords_count': len(job['keywords']),
-            'keyword_match': (len(matched_keywords) / len(job['keywords'])) * 100
-        })
-    
-    return sorted(results, key=lambda x: x['fit_score'], reverse=True)
+        # Sort by fit score
+        return sorted(results, key=lambda x: x['fit_score'], reverse=True)
     
     @staticmethod
     def get_improvement_suggestions(missing_keywords: List[str]) -> List[str]:
-        """Get suggestions to improve job fit"""
-        if not missing_keywords:
-            return ["Your resume is well-matched to this role!"]
-        
+        """Generate suggestions based on missing keywords."""
         suggestions = []
-        tech_keywords = [k for k in missing_keywords if any(
-            x in k.lower() for x in ['python', 'java', 'node', 'react', 'aws']
-        )]
         
-        if tech_keywords:
-            suggestions.append(f"Add technical skills: {', '.join(tech_keywords[:2])}")
+        cloud_keywords = ['aws', 'azure', 'gcp', 'docker', 'kubernetes']
+        ml_keywords = ['tensorflow', 'pytorch', 'scikit-learn', 'machine learning']
+        web_keywords = ['react', 'node.js', 'django', 'flask']
         
-        other = [k for k in missing_keywords if k not in tech_keywords]
-        if other:
-            suggestions.append(f"Consider adding: {', '.join(other[:2])}")
+        missing_lower = [k.lower() for k in missing_keywords]
         
-        return suggestions[:3]
+        if any(k in missing_lower for k in cloud_keywords):
+            suggestions.append("Complete AWS/Azure certification or Docker course")
+        if any(k in missing_lower for k in ml_keywords):
+            suggestions.append("Build ML projects with TensorFlow/PyTorch")
+        if any(k in missing_lower for k in web_keywords):
+            suggestions.append("Create full-stack project (React + Node.js/Django)")
+        
+        # Generic suggestions
+        if len(missing_keywords) > 3:
+            suggestions.append("Add 2-3 more relevant keywords to resume")
+        suggestions.append("Update GitHub with recent projects")
+        
+        return suggestions[:4]
