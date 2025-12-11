@@ -3,7 +3,8 @@ import sys
 from pathlib import Path
 
 from src.extractors import ResumeExtractor
-from src.nlp_processor import NLPProcessor, SkillExtractor
+from src.nlp_processor import NLPProcessor
+
 from src.skill_predictor import SkillPredictor
 from src.job_matcher import JobMatcher
 from src.resume_scorer import ResumeScorer
