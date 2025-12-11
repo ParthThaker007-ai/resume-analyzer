@@ -36,18 +36,48 @@ class NLPProcessor:
         return projects[:5]
 
     def extract_skills(self, text):
-        """Extract skills using regex + NLTK."""
-        stop_words = set(stopwords.words('english'))
-        skills_patterns = [
-            r'(python|java|javascript|react|node\.js|sql|docker|aws|azure|kubernetes)',
-            r'(machine learning|deep learning|nlp|computer vision|tensorflow|pytorch)',
-            r'(git|github|jenkins|docker|kubernetes|terraform)',
-            r'(flask|django|fastapi|express|spring)'
-        ]
-        skills = []
-        text_lower = text.lower()
-        for pattern in skills_patterns:
-            matches = re.findall(pattern, text_lower)
-            skills.extend(matches)
-        unique_skills = list(set([s.capitalize() for s in skills]))
-        return {'Technical Skills': unique_skills[:20]}, len(unique_skills)
+    """Extract skills using case-insensitive regex + normalization."""
+    import re
+    from nltk.corpus import stopwords
+    nltk.download('stopwords', quiet=True)
+    stop_words = set(stopwords.words('english'))
+    
+    # Expanded skills patterns (case-insensitive)
+    skills_patterns = [
+        r'(python|java|javascript|js|react|node\.js|nodejs|sql|docker|aws|amazon web services|azure|kubernetes|k8s)',
+        r'(machine learning|deep learning|nlp|natural language|computer vision|tensorflow|tf|pytorch|scikit-learn|sklearn)',
+        r'(git|github|gitlab|jenkins|docker|kubernetes|k8s|terraform|ansible)',
+        r'(flask|django|fastapi|express|spring boot|springboot|laravel|rails)',
+        r'(pandas|numpy|matplotlib|seaborn|plotly|jupyter)'
+    ]
+    
+    skills = []
+    text_lower = text.lower()
+    
+    for pattern in skills_patterns:
+        matches = re.findall(pattern, text_lower, re.IGNORECASE)
+        skills.extend(matches)
+    
+    # Normalize and deduplicate (preserve casing from original text)
+    normalized_skills = []
+    for skill in skills:
+        # Capitalize properly
+        if skill.lower() == 'aws':
+            normalized_skills.append('AWS')
+        elif skill.lower() == 'k8s':
+            normalized_skills.append('Kubernetes')
+        elif skill.lower() == 'js':
+            normalized_skills.append('JavaScript')
+        elif skill.lower() == 'nodejs':
+            normalized_skills.append('Node.js')
+        elif skill.lower() == 'tf':
+            normalized_skills.append('TensorFlow')
+        elif skill.lower() == 'sklearn':
+            normalized_skills.append('Scikit-learn')
+        else:
+            normalized_skills.append(skill.capitalize())
+    
+    unique_skills = list(dict.fromkeys(normalized_skills))  # Preserve order
+    
+    return {'Technical Skills': unique_skills[:25]}, len(unique_skills)
+
