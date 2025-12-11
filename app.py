@@ -91,9 +91,11 @@ with tab1:
         st.success("✅ Text loaded!")
 
     # Preview
-    if st.session_state.resume_text:
+    # Preview - FIXED
+     if st.session_state.resume_text:
         st.subheader("📄 Preview")
         st.text_area(
+            label="Resume Preview",  # REQUIRED
             value=st.session_state.resume_text,
             height=300,
             disabled=True,
@@ -101,6 +103,7 @@ with tab1:
         )
         word_count = len(st.session_state.resume_text.split())
         st.info(f"📊 **Words:** {word_count} | **Chars:** {len(st.session_state.resume_text)}")
+
 
 # ----------------------------
 # TAB 2: Resume Analysis
