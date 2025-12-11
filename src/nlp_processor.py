@@ -71,41 +71,61 @@ class NLPProcessor:
         return projects
 
     def extract_skills(self, text):
-        """Extract skills using case-insensitive regex + normalization."""
-        stop_words = set(stopwords.words('english'))
-        
-        # Comprehensive skills patterns (case-insensitive)
-        skills_patterns = [
-            r'(python|java|javascript|js?|typescript|react|vue|angular|node\.?(js)?|nodejs|sql|mysql|postgresql|mongodb)',
-            r'(machine learning|deep learning|nlp|ai|computer vision|tensorflow|tf?|pytorch|scikit[-_]?learn|sklearn|keras|huggingface)',
-            r'(git|github|gitlab|docker|aws|amazon web services|azure|gcp|google cloud|kubernetes|k8s?|terraform|ansible|jenkins|ci/?cd)',
-            r'(flask|django|fastapi|express|spring boot|springboot|laravel|ruby on rails?|next\.?js?|nuxt\.?js?)',
-            r'(pandas|numpy|matplotlib|seaborn|plotly|jupyter|colab|linux|windows|macos)'
-        ]
-        
-        all_skills = []
-        text_lower = text.lower()
-        
-        for pattern in skills_patterns:
-            matches = re.findall(pattern, text_lower, re.IGNORECASE)
-            all_skills.extend(matches)
-        
-        # Normalize skill names (preserve proper casing)
-        normalized_skills = []
-        skill_mapping = {
-            'js': 'JavaScript',
-            'nodejs': 'Node.js',
-            'tf': 'TensorFlow',
-            'sklearn': 'Scikit-learn',
-            'k8s': 'Kubernetes',
-            'aws': 'AWS'
-        }
-        
-        for skill in all_skills:
-            clean_skill = skill_mapping.get(skill.lower(), skill.capitalize())
-            if clean_skill not in normalized_skills:
-                normalized_skills.append(clean_skill)
-        
-        return {
-            'Technical Skills': normalized_skills[:25]
-        }, len(normalized_skills)
+    """Extract skills using case-insensitive regex + normalization."""
+    import re
+    from nltk.corpus import stopwords
+    nltk.download('stopwords', quiet=True)
+    
+    # Comprehensive skills patterns (case-insensitive)
+    skills_patterns = [
+        r'(python|java|javascript|js?|typescript|react|vue|angular|node\.?(js)?|nodejs|sql|mysql|postgresql|mongodb)',
+        r'(machine learning|deep learning|nlp|ai|computer vision|tensorflow|tf?|pytorch|scikit[-_]?learn|sklearn|keras|huggingface)',
+        r'(git|github|gitlab|docker|aws|amazon web services|azure|gcp|google cloud|kubernetes|k8s?|terraform|ansible|jenkins|ci/?cd)',
+        r'(flask|django|fastapi|express|spring boot|springboot|laravel|ruby on rails?|next\.?js?|nuxt\.?js?)',
+        r'(pandas|numpy|matplotlib|seaborn|plotly|jupyter|colab|linux|windows|macos)'
+    ]
+    
+    all_skills = []
+    text_lower = text.lower()
+    
+    # Extract ALL matches and flatten tuples
+    for pattern in skills_patterns:
+        matches = re.findall(pattern, text_lower, re.IGNORECASE)
+        # Flatten tuples (e.g., ('node', 'js') → 'node.js')
+        for match in matches:
+            if isinstance(match, tuple):
+                # Join tuple elements with spaces/dots
+                skill_str = '.'.join(str(x) for x in match if x)
+            else:
+                skill_str = str(match)
+            all_skills.append(skill_str)
+    
+    # Normalize skill names with proper casing
+    normalized_skills = []
+    skill_mapping = {
+        'js': 'JavaScript',
+        'nodejs': 'Node.js',
+        'node js': 'Node.js',
+        'tf': 'TensorFlow',
+        'sklearn': 'Scikit-learn',
+        'scikit learn': 'Scikit-learn',
+        'k8s': 'Kubernetes',
+        'aws': 'AWS',
+        'ai': 'AI',
+        'nlp': 'NLP'
+    }
+    
+    seen = set()
+    for skill in all_skills:
+        skill_lower = skill.lower().strip()
+        if skill_lower in skill_mapping and skill_lower not in seen:
+            normalized_skill = skill_mapping[skill_lower]
+            normalized_skills.append(normalized_skill)
+            seen.add(skill_lower)
+        elif skill_lower not in seen and len(skill_lower) > 1:
+            normalized_skills.append(skill.title())
+            seen.add(skill_lower)
+    
+    return {
+        'Technical Skills': normalized_skills[:25]
+    }, len(normalized_skills)
