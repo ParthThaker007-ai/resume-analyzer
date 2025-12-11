@@ -34,3 +34,20 @@ class NLPProcessor:
             if any(h in line.lower() for h in ['project', 'projects']) and len(line.strip()) > 10:
                 projects.append(line.strip())
         return projects[:5]
+
+    def extract_skills(self, text):
+        """Extract skills using regex + NLTK."""
+        stop_words = set(stopwords.words('english'))
+        skills_patterns = [
+            r'(python|java|javascript|react|node\.js|sql|docker|aws|azure|kubernetes)',
+            r'(machine learning|deep learning|nlp|computer vision|tensorflow|pytorch)',
+            r'(git|github|jenkins|docker|kubernetes|terraform)',
+            r'(flask|django|fastapi|express|spring)'
+        ]
+        skills = []
+        text_lower = text.lower()
+        for pattern in skills_patterns:
+            matches = re.findall(pattern, text_lower)
+            skills.extend(matches)
+        unique_skills = list(set([s.capitalize() for s in skills]))
+        return {'Technical Skills': unique_skills[:20]}, len(unique_skills)
