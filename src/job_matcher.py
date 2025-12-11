@@ -39,35 +39,37 @@ class JobMatcher:
         return matched, missing, round(match_percentage, 1)
     
     @staticmethod
-    def rank_jobs(resume_text: str, resume_skills: Dict, 
-                  jobs_list: List[Dict]) -> List[Dict]:
-        """Rank jobs by fit score"""
-        ranked_jobs = []
+    def rank_jobs(resume_text, skills_dict, jobs):
+    """Rank jobs with case-insensitive matching."""
+    resume_lower = resume_text.lower()
+    results = []
+    
+    for job in jobs:
+        job_lower = {k.lower(): v.lower() for k, v in job.items()}
+        matched_keywords = []
+        missing_keywords = []
         
-        for job in jobs_list:
-            title = job.get("title", "Unknown")
-            keywords = job.get("keywords", [])
-            
-            fit_score = JobMatcher.calculate_fit_score(resume_text, title)
-            matched, missing, keyword_match = JobMatcher.match_keywords(
-                resume_skills, keywords
-            )
-            
-            final_score = (fit_score * 0.6) + (keyword_match * 0.4)
-            
-            ranked_jobs.append({
-                "job_title": title,
-                "fit_score": round(final_score, 1),
-                "text_similarity": fit_score,
-                "keyword_match": keyword_match,
-                "matched_keywords": matched,
-                "missing_keywords": missing,
-                "keywords_count": len(keywords),
-                "matched_count": len(matched)
-            })
+        # Case-insensitive keyword matching
+        for keyword in job['keywords']:
+            keyword_lower = keyword.lower()
+            if keyword_lower in resume_lower or any(keyword_lower in skill.lower() for skill in skills_dict.get('Technical Skills', [])):
+                matched_keywords.append(keyword)
+            else:
+                missing_keywords.append(keyword)
         
-        ranked_jobs.sort(key=lambda x: x["fit_score"], reverse=True)
-        return ranked_jobs
+        fit_score = min(100, max(0, (len(matched_keywords) / len(job['keywords'])) * 100))
+        
+        results.append({
+            'job_title': job['title'],
+            'fit_score': fit_score,
+            'matched_keywords': matched_keywords,
+            'missing_keywords': missing_keywords,
+            'matched_count': len(matched_keywords),
+            'keywords_count': len(job['keywords']),
+            'keyword_match': (len(matched_keywords) / len(job['keywords'])) * 100
+        })
+    
+    return sorted(results, key=lambda x: x['fit_score'], reverse=True)
     
     @staticmethod
     def get_improvement_suggestions(missing_keywords: List[str]) -> List[str]:
