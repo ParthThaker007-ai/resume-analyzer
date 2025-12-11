@@ -148,7 +148,8 @@ with tab2:
 
             # SKILLS
             st.subheader("Extracted Skills")
-            skills_dict, skill_count = SkillExtractor.extract_skills(st.session_state.resume_text)
+            skills_dict, skill_count = nlp.extract_skills(st.session_state.resume_text)
+
             if skills_dict:
                 col1, col2, col3 = st.columns(3)
                 with col1:
